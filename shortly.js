@@ -5,6 +5,7 @@ var bodyParser = require('body-parser');
 
 
 var db = require('./app/config');
+var bcrypt = require('bcrypt-nodejs');
 var Users = require('./app/collections/users');
 var User = require('./app/models/user');
 var Links = require('./app/collections/links');
@@ -96,22 +97,26 @@ app.get('/login', function(req, res) {
 app.post('/login', function(req, res) {
   var username = req.body.username;
   var password = req.body.password;
-  User.where('username', username).fetch()
-  .then(function(user) {
-    if (user) {
-      var databasePassword = user.get('password');
-      if (databasePassword === password) {
-        req.session.regenerate(function(err) {
-          req.session.user = username;
-          res.redirect('/');
-        });
-      } else {
-        res.redirect('/login');
-      }
-    } else {
+  User.where('username', username).fetch() // fetch user from database
+  .then(function(user) { // we've checked database for user
+    if (user) { // user exists
+      var hash = user.get('password');
+      bcrypt.compare(password, hash, function(err, matches) {
+        if (err) {
+          console.log(err); 
+        } else if (matches) { // password matches hash, successful login
+          req.session.regenerate(function(err) {
+            req.session.user = username;
+            res.redirect('/');
+          });
+        } else { // unsuccessful login
+          res.redirect('/login');
+        }
+      });
+    } else { // user record does not exist in database
       res.redirect('/login');
     }
-  }).catch(function(err) {
+  }).catch(function(err) { // database error
     console.error(err);
     res.end();
   });
@@ -124,6 +129,7 @@ app.get('/signup', function(req, res) {
 app.post('/signup', function(req, res) {
   var username = req.body.username;
   var password = req.body.password;
+  console.log('Line 132: signup');
   new User({ username: username }).fetch().then(function(found) {
     if (found) {
       res.redirect('/login');
@@ -140,6 +146,20 @@ app.post('/signup', function(req, res) {
       });
     }
   });
+});
+
+app.get('/logout', function(req, res) {
+  if (req.session) {
+    req.session.destroy(function(err) {
+      if (err) {
+        console.log(err);
+      } else {
+        res.redirect('/login');
+      }
+    });  
+  } else {
+    res.redirect('/login');    
+  }
 });
 
 function checkUser(req, res, next) {
