@@ -76,8 +76,9 @@ describe('', function() {
 
     var requestWithSession = request.defaults({jar: true});
 
-    xbeforeEach(function(done) {
+    beforeEach(function(done) {
       // create a user that we can then log-in with
+      console.log('About to create Phillip');
       new User({
         'username': 'Phillip',
         'password': 'Phillip'
@@ -91,6 +92,7 @@ describe('', function() {
             'password': 'Phillip'
           }
         };
+        console.log('About to initiate post request to log in...');
         // login via form and save session info
         requestWithSession(options, function(error, res, body) {
           done();

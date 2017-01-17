@@ -76,7 +76,13 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 
-
+app.post('/login', function(req, res) {
+  var username = req.body.username;
+  console.log('username ========> ', username);
+  var password = req.body.password;
+  console.log('password ========> ', password);
+  res.send();  
+});
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
