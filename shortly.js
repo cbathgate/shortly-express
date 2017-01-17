@@ -96,19 +96,49 @@ app.get('/login', function(req, res) {
 app.post('/login', function(req, res) {
   var username = req.body.username;
   var password = req.body.password;
-  User.where('username', username).fetch().then(function(user) {
-    var databasePassword = user.get('password');
-    if (databasePassword === password) {
-      req.session.regenerate(function(err) {
-        req.session.user = username;
-        res.redirect('/');
-      });
+  User.where('username', username).fetch()
+  .then(function(user) {
+    if (user) {
+      var databasePassword = user.get('password');
+      if (databasePassword === password) {
+        req.session.regenerate(function(err) {
+          req.session.user = username;
+          res.redirect('/');
+        });
+      } else {
+        res.redirect('/login');
+      }
     } else {
       res.redirect('/login');
     }
   }).catch(function(err) {
     console.error(err);
     res.end();
+  });
+});
+
+app.get('/signup', function(req, res) {
+  res.render('signup');
+}); 
+
+app.post('/signup', function(req, res) {
+  var username = req.body.username;
+  var password = req.body.password;
+  new User({ username: username }).fetch().then(function(found) {
+    if (found) {
+      res.redirect('/login');
+    } else {
+      Users.create({
+        username: username,
+        password: password
+      })
+      .then(function(err) {
+        req.session.regenerate(function(err) {
+          req.session.user = username;
+          res.redirect('/');
+        }); 
+      });
+    }
   });
 });
 
