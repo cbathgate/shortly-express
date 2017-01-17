@@ -35,8 +35,6 @@ app.use(session({
 /////////////////////////
 app.use(express.static(__dirname + '/public'));
 
-
-
 app.get('/', checkUser,
 function(req, res) {
   res.render('index');
@@ -49,8 +47,21 @@ function(req, res) {
 
 app.get('/links', checkUser,
 function(req, res) {
-  Links.reset().fetch().then(function(links) {
-    res.status(200).send(links.models);
+  var username = req.session.user;
+  User.where('username', username).fetch()
+  .then(function(user) {
+    var userid = user.get('id');
+    Links.reset().fetch()
+    .then(function(links) {
+      var models = [];
+      links.forEach(function(link) {
+        var fromLinks = link.get('userid');
+        if (fromLinks === userid) {
+          models.push(link);
+        }
+      });
+      res.status(200).send(models);
+    });
   });
 });
 
@@ -72,14 +83,19 @@ function(req, res) {
           console.log('Error reading URL heading: ', err);
           return res.sendStatus(404);
         }
-
-        Links.create({
-          url: uri,
-          title: title,
-          baseUrl: req.headers.origin
-        })
-        .then(function(newLink) {
-          res.status(200).send(newLink);
+        var username = req.session.user;
+        User.where('username', username).fetch()
+        .then(function(user) {
+          var userId = user.get('id');
+          Links.create({
+            url: uri,
+            title: title,
+            baseUrl: req.headers.origin,
+            userId: userId
+          })
+          .then(function(newLink) {
+            res.status(200).send(newLink);
+          });
         });
       });
     }
