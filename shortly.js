@@ -26,7 +26,10 @@ app.use(session({
   secret: 'keyboard cat',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: true }
+  cookie: { 
+    secure: false,
+    maxAge: 120000
+  }
 }));
 /////////////////////////
 app.use(express.static(__dirname + '/public'));
@@ -96,8 +99,7 @@ app.post('/login', function(req, res) {
   User.where('username', username).fetch().then(function(user) {
     var databasePassword = user.get('password');
     if (databasePassword === password) {
-      console.log('They match');
-      req.session.regenerate(function() {
+      req.session.regenerate(function(err) {
         req.session.user = username;
         res.redirect('/');
       });
@@ -111,9 +113,7 @@ app.post('/login', function(req, res) {
 });
 
 function checkUser(req, res, next) {
-  console.log('Checking user');
   if (!req.session.user) {
-    console.log('This request doesnt have a proper session', req.session.user);
     res.redirect('/login');
   } else {
     next();
