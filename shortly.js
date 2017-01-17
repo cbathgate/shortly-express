@@ -10,6 +10,7 @@ var User = require('./app/models/user');
 var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
+var session = require('express-session');
 
 var app = express();
 
@@ -20,20 +21,29 @@ app.use(partials());
 app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
+/////////////////////////
+app.use(session({
+  secret: 'keyboard cat',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: true }
+}));
+/////////////////////////
 app.use(express.static(__dirname + '/public'));
 
 
-app.get('/', 
+
+app.get('/', checkUser,
 function(req, res) {
   res.render('index');
 });
 
-app.get('/create', 
+app.get('/create', checkUser, 
 function(req, res) {
   res.render('index');
 });
 
-app.get('/links', 
+app.get('/links', checkUser,
 function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.status(200).send(links.models);
@@ -76,13 +86,39 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 
+app.get('/login', function(req, res) {
+  res.render('login'); 
+});
+
 app.post('/login', function(req, res) {
   var username = req.body.username;
-  console.log('username ========> ', username);
   var password = req.body.password;
-  console.log('password ========> ', password);
-  res.send();  
+  User.where('username', username).fetch().then(function(user) {
+    var databasePassword = user.get('password');
+    if (databasePassword === password) {
+      console.log('They match');
+      req.session.regenerate(function() {
+        req.session.user = username;
+        res.redirect('/');
+      });
+    } else {
+      res.redirect('/login');
+    }
+  }).catch(function(err) {
+    console.error(err);
+    res.end();
+  });
 });
+
+function checkUser(req, res, next) {
+  console.log('Checking user');
+  if (!req.session.user) {
+    console.log('This request doesnt have a proper session', req.session.user);
+    res.redirect('/login');
+  } else {
+    next();
+  }
+}
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
